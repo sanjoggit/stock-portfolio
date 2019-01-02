@@ -26,6 +26,7 @@
   border: 1px solid silver;
   padding: 10px;
   margin-bottom: 10px;
+  background: whiteSmoke;
 }
 .portfolio-header{
   display: flex;
@@ -40,4 +41,19 @@
   display: flex;
   justify-content: space-around;
   align-items: flex-end;
+}
+
+/*modal dialog for chart*/
+@media(min-width: 576px){
+  .modal-size{
+      max-width: 70% !important;
+  }
+}
+
+/*chart input date*/
+
+input[type='date']{
+border: 1px solid silver;
+border-radius: 5px;
+height: 35px;
 }

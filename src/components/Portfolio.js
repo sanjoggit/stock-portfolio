@@ -2,7 +2,9 @@ import React, {Component} from 'react'
 import AddPortfolio from './AddPortfolio'
 import {Col, Row, Button, Table} from 'reactstrap'
 import Addstock from './AddStock'
+import PortfolioChart from './PortfolioChart'
 import axios from 'axios'
+import update from 'immutability-helper';
 
 class Portfolio extends Component {
     constructor(props){
@@ -13,9 +15,11 @@ class Portfolio extends Component {
             stockAmount: 1,
             portfolios: [],
             exchangeRate: '',
+            selectedStocks: [],
         }
     }
 
+    //get the exchange rate from usd to euro on initial loading
     UNSAFE_componentWillMount() {
         axios
             .get(
@@ -42,6 +46,8 @@ class Portfolio extends Component {
             [e.target.name]: e.target.value,
         })
     }
+
+    //creates new portfolio
     createPortfolio = (toggle)=>{
         if(this.state.portfolioName === ''){
             alert('Portfolio name cannot be empty')
@@ -61,6 +67,7 @@ class Portfolio extends Component {
 
         }
     }
+    //removes the portfolio
     removePortfolio = (i)=>{
         let portfolios = this.state.portfolios;
         portfolios.splice(i, 1);
@@ -69,6 +76,7 @@ class Portfolio extends Component {
         })
     }
 
+    //gets the stocks value from api and add to the related portfolio
     addStock = (index, toggle)=>{
         if(this.state.stockName === ''){
             alert('Please enter stock name')
@@ -97,7 +105,7 @@ class Portfolio extends Component {
                     this.setState({
                         portfolios,
                     })
-                })
+                }).catch(e=>alert('stock doesnot exist'))
             this.setState({
                 stockName: '',
                 stockAmount: 1,
@@ -105,14 +113,63 @@ class Portfolio extends Component {
             toggle()
         }
     }
+    //toggle the button name for displaying dollar and euro
     toggleButton = (i)=>{
         this.setState({
-            portfolios: [
-                {
-                    isEuro: !this.state.portfolios[i].isEuro,
+            portfolios: update(this.state.portfolios, {
+                [i]: {
+                    isEuro: {$set: !this.state.portfolios[i].isEuro},
                 },
-            ],
+            }),
         })
+    }
+
+    //selects the stock from each portfolio and save for deletion
+    selectedStock = (stockName)=>{
+        const selectedStocks = this.state.selectedStocks;
+        if(selectedStocks.includes(stockName)){
+            const index = selectedStocks.indexOf(stockName);
+            selectedStocks.splice(index, 1);
+        } else{
+            selectedStocks.push(stockName);
+        }
+
+        this.setState({
+            selectedStocks,
+        })
+        
+    }
+    //removes selected stocks from each portfolio
+    removeSelectedStocks = (i)=>{
+        const stocks = this.state.portfolios[i].stocks;
+        const selectedStocks = this.state.selectedStocks;
+        const newStocks = stocks.filter(item=>!selectedStocks.includes(item.stockName))
+    
+        this.setState({
+            portfolios: update(this.state.portfolios, {
+                [i]: {
+                    stocks: {
+                        $set: newStocks,
+                    },
+                },
+            }),
+            selectedStocks: [],
+        })
+    }
+
+    //total values of each portfolio
+    countValue = (i)=>{
+        let value = [0];
+        let portfolio = this.state.portfolios[i]
+        portfolio.stocks.map(item=>value.push(Number(item.totalValue)))
+        if(portfolio.isEuro){
+            const totalValue = value.reduce((total, num)=>total + num)
+            return Number.parseFloat(totalValue).toFixed(3) + '$'
+        } else{
+            const totalValue = value.reduce((total, num)=>total + num) * this.state.exchangeRate;
+            return Number.parseFloat(totalValue).toFixed(3) + '€'
+        }
+        
     }
     render() {
         const portfolios = this.state.portfolios.map((item, i)=>(
@@ -151,14 +208,14 @@ class Portfolio extends Component {
                                             Number(stockItem.totalValue) + '$' : 
                                             Number.parseFloat(Number(stockItem.totalValue) * this.state.exchangeRate).toFixed(3) + '€'}
                                         </td>
-                                        <td><input type="checkbox"/></td>
+                                        <td><input type="checkbox" onClick={()=>this.selectedStock(stockItem.stockName)} /></td>
                                     </tr>
                                 </tbody>
                             ))}
                             
                         </Table>
                     </div>
-                    <p>Total Value:0</p>
+                    <p>Total Value: {this.countValue(i)}</p>
                     <div className="portfolio-footer">
                         <Addstock 
                             stockName={this.state.stockName}
@@ -167,8 +224,8 @@ class Portfolio extends Component {
                             addStock={this.addStock}
                             index = {i}
                         />
-                        <span><Button color="info">Perf Graph</Button></span>
-                        <span><Button color="danger">Remove Selected</Button></span>
+                        <PortfolioChart id={i} portfolios={this.state.portfolios} />
+                        <span><Button color="danger" onClick={()=>this.removeSelectedStocks(i)}>Remove Selected</Button></span>
                     </div>
                 </div>
             </Col>
