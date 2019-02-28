@@ -30,7 +30,7 @@ class AddStock extends Component {
                                 <input 
                                     type="text" 
                                     className="form-control" 
-                                    placeholder="Stock Name"
+                                    placeholder="Example: NOK or Msft..."
                                     name="stockName"
                                     style={{textTransform: 'uppercase'}}
                                     value={stockName}
